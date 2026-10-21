@@ -1,0 +1,9 @@
+[build]
+  publish = "."
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Permissions-Policy = "camera=(self)"
+    Cache-Control = "no-cache"
+    X-Frame-Options = "DENY"

@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#e53935">
+<title>Fichaje Volta</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Roboto+Condensed:wght@600;700;800&display=swap">
+<style>
+/* Identidad Volta Baterías: cabecera roja con la marca, fondo claro neutro, titulares Roboto Condensed en mayúsculas, botones en píldora. */
+:root{
+  --brand:#e53935;      /* brand-600 */
+  --brand-500:#ef4640;
+  --bg:#f6f6f6;         /* carbon-50 */
+  --panel:#ffffff;
+  --line:#dbdbdb;       /* carbon-200 */
+  --fg:#121212;         /* carbon-950 */
+  --muted:#6e6e6e;      /* carbon-500 */
+  --in:#059669;         /* entrada */
+  --out:#e53935;        /* salida = rojo de marca */
+  --warn:#f9ab00;
+  --display:"Roboto Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:"Roboto",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0;overflow:hidden;overscroll-behavior:none}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);user-select:none;-webkit-user-select:none}
+.screen{position:fixed;inset:0;display:none;flex-direction:column}
+.screen.active{display:flex}
+header{background:var(--brand);color:#fff;display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:72px;padding-block:calc(10px + env(safe-area-inset-top,0px)) 10px;padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px))}
+.logo{display:flex;align-items:center;gap:12px;text-decoration:none;color:#fff}
+.logo .ico{display:grid;place-items:center;width:42px;height:42px;border-radius:12px;background:#fff;color:var(--brand)}
+.logo .ico svg{width:24px;height:24px}
+.logo .wm{font:700 24px/1 var(--display);text-transform:uppercase;letter-spacing:-.01em}
+.logo .wm small{display:block;font:600 10px var(--body);letter-spacing:.28em;opacity:.85;margin-top:3px}
+.hdr-right{text-align:right}
+.clock{font:700 40px/1 var(--display);font-variant-numeric:tabular-nums}
+.date{font-size:14px;opacity:.9;text-transform:capitalize;margin-top:2px}
+.body{flex:1;display:flex;flex-direction:column;min-height:0;padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px));padding-block:0 env(safe-area-inset-bottom,0px)}
+.hint{color:var(--muted);font-size:17px;padding-block:16px 6px;font-weight:500}
+.grid{flex:1;display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));grid-auto-rows:minmax(96px,1fr);gap:14px;padding-block:8px 16px;overflow:auto}
+.who{appearance:none;border:1px solid var(--line);border-radius:18px;background:var(--panel);color:var(--fg);font:700 30px/1.1 var(--display);text-transform:uppercase;letter-spacing:.01em;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:10px;min-width:0;box-shadow:0 1px 2px rgba(18,18,18,.05),0 8px 24px -8px rgba(18,18,18,.08)}
+.who small{font:500 13.5px var(--body);color:var(--muted);text-transform:none;letter-spacing:0}
+.who:active{background:var(--brand);color:#fff;border-color:var(--brand);box-shadow:0 0 0 1px rgba(229,57,53,.22),0 8px 40px -8px rgba(229,57,53,.35)}
+.who:active small{color:#fff}
+footer{display:flex;justify-content:space-between;align-items:center;gap:12px;padding-block:8px 14px;color:var(--muted);font-size:13.5px}
+.pill{display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:6px 14px;background:var(--panel);border:1px solid var(--line);font-weight:500}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--in)}
+.dot.off{background:var(--out)}
+.dot.queue{background:var(--warn)}
+
+/* cámara */
+.cam-wrap{flex:1;display:grid;grid-template-columns:1fr minmax(260px,380px);gap:20px;padding-block:16px;min-height:0}
+.viewfinder{position:relative;background:#121212;border-radius:24px;overflow:hidden;border:1px solid var(--line);min-height:0}
+.viewfinder video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
+.viewfinder .msg{position:absolute;inset:0;display:none;align-items:center;justify-content:center;text-align:center;padding:24px;color:#dadce0;font-size:20px;background:#121212}
+.viewfinder.nocam .msg{display:flex}
+.side{display:flex;flex-direction:column;gap:14px;min-width:0}
+.name{font:700 44px/1 var(--display);text-transform:uppercase;text-wrap:balance}
+.sub{color:var(--muted);font-size:16px;font-weight:500}
+.big{appearance:none;border:0;border-radius:999px;color:#fff;font:700 32px/1 var(--display);letter-spacing:.03em;text-transform:uppercase;padding:22px 16px;cursor:pointer;flex:1;min-height:92px;display:flex;align-items:center;justify-content:center;gap:12px;transition:transform .15s}
+.big.in{background:var(--in)}
+.big.out{background:var(--out);box-shadow:0 0 0 1px rgba(229,57,53,.22),0 8px 40px -8px rgba(229,57,53,.35)}
+.big:disabled{opacity:.4;cursor:default;box-shadow:none}
+.big:active{transform:scale(.98);filter:brightness(1.08)}
+.ghost{appearance:none;background:transparent;border:2px solid var(--line);color:var(--muted);border-radius:999px;font:600 16px var(--body);padding:13px;cursor:pointer}
+.ghost:active{border-color:var(--brand);color:var(--brand)}
+.suggest{font-size:14.5px;color:var(--muted)}
+.suggest b{color:var(--fg)}
+
+/* PIN */
+.pinbox{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;flex:1}
+.pindots{display:flex;gap:16px;height:24px}
+.pindots i{width:20px;height:20px;border-radius:50%;border:2px solid var(--line)}
+.pindots i.on{background:var(--brand);border-color:var(--brand)}
+.pindots.err i{border-color:var(--out)}
+.keys{display:grid;grid-template-columns:repeat(3,88px);gap:12px}
+.keys button{appearance:none;border:1px solid var(--line);background:var(--panel);color:var(--fg);border-radius:999px;font:600 30px var(--display);height:72px;cursor:pointer}
+.keys button:active{background:var(--brand);color:#fff;border-color:var(--brand)}
+
+/* confirmación */
+.done{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center}
+.done img{width:min(40vh,320px);aspect-ratio:4/3;object-fit:cover;border-radius:24px;border:1px solid var(--line);max-width:100%;background:#121212}
+.done .tag{font:700 64px/1 var(--display);text-transform:uppercase;letter-spacing:.03em}
+.done .tag.in{color:var(--in)}
+.done .tag.out{color:var(--out)}
+.done .when{font:700 34px/1 var(--display);font-variant-numeric:tabular-nums}
+.done .note{color:var(--muted);font-size:16px;max-width:48ch}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:#121212;color:#fff;padding:12px 20px;border-radius:999px;font-size:15px;display:none;max-width:90vw;text-align:center}
+.toast.show{display:block}
+@media (max-width:760px){
+  .cam-wrap{grid-template-columns:1fr;grid-template-rows:minmax(200px,1fr) auto}
+  .name{font-size:36px}.big{font-size:28px;min-height:76px;padding:16px}
+  .clock{font-size:30px}.logo .wm{font-size:20px}
+  .grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}
+  .who{font-size:24px}
+}
+@media (prefers-reduced-motion:no-preference){
+  .screen.active{animation:fade .18s ease-out}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+}
+</style>
+</head>
+<body>
+
+<!-- ============ CONFIGURACIÓN ============ -->
+<script>
+const CONFIG = {
+  // Webhook de Make que guarda el fichaje en Airtable
+  WEBHOOK_URL: "https://hook.eu2.make.com/cgzqxg8ssit0xtq6br9npan2mly4cfy5",
+  // Nombre de esta tablet (si algún día hay más de una)
+  DISPOSITIVO: "Tablet almacén",
+  // Segundos sin tocar la pantalla antes de volver al inicio
+  INACTIVIDAD: 40,
+  // Segundos que se muestra la pantalla de confirmación
+  CONFIRMACION: 4,
+  // Plantilla: id = ID del registro en la tabla Empleados de Airtable.
+  // pin: opcional, 4 dígitos. Si se deja vacío no se pide.
+  EMPLEADOS: [
+    { id: "recURVGG9k3xF0acS", nombre: "Yago",   pin: "" },
+    { id: "rec8HA1OtOU940h28", nombre: "David",  pin: "" },
+    { id: "rec2sfPJwIzGC8X3c", nombre: "Edu",    pin: "" },
+    { id: "recm91m1yH5DQl7Hv", nombre: "Borja",  pin: "" },
+    { id: "recKulvv3E6q4lrkP", nombre: "Fran",   pin: "" },
+    { id: "recaOuHlrJqtN0tCB", nombre: "Raul",   pin: "" },
+    { id: "recCxREM1Q33sWP5c", nombre: "Ivan",   pin: "" },
+    { id: "rece1pkfGIuwPDgHg", nombre: "Gerson", pin: "" },
+    { id: "recD4ynjGsSHlO3DS", nombre: "Marcos", pin: "" },
+    { id: "rec1KHgV37DrrErwa", nombre: "Lorant", pin: "" },
+  ],
+};
+</script>
+
+<!-- ============ PANTALLA 1: ¿QUIÉN ERES? ============ -->
+<section class="screen active" id="s-home">
+  <header>
+    <a class="logo" aria-label="Volta Baterías"><span class="ico"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 2 4 14h6l-1 8 9-12h-6z"/></svg></span><span class="wm">Volta<small>BATERÍAS</small></span></a>
+    <div class="hdr-right"><div class="clock" id="clock">--:--</div><div class="date" id="date"></div></div>
+  </header>
+  <div class="body">
+    <div class="hint">Toca tu nombre para fichar</div>
+    <div class="grid" id="grid"></div>
+    <footer>
+      <span class="pill"><i class="dot" id="netdot"></i><span id="nettxt">Conectado</span></span>
+      <span id="lastinfo"></span>
+    </footer>
+  </div>
+</section>
+
+<!-- ============ PANTALLA PIN (solo si el empleado tiene PIN) ============ -->
+<section class="screen" id="s-pin">
+  <header><a class="logo" aria-label="Volta Baterías"><span class="ico"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 2 4 14h6l-1 8 9-12h-6z"/></svg></span><span class="wm">Volta<small>BATERÍAS</small></span></a><div class="hdr-right"><div class="clock" id="clock2">--:--</div><div class="date" id="pin-name"></div></div></header>
+  <div class="body"><div class="pinbox">
+    <div class="sub">Introduce tu PIN</div>
+    <div class="pindots" id="pindots"><i></i><i></i><i></i><i></i></div>
+    <div class="keys" id="keys"></div>
+    <button class="ghost" id="pin-cancel" style="width:288px">Cancelar</button>
+  </div></div>
+</section>
+
+<!-- ============ PANTALLA 2: FOTO + ENTRADA / SALIDA ============ -->
+<section class="screen" id="s-cam">
+  <header><a class="logo" aria-label="Volta Baterías"><span class="ico"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 2 4 14h6l-1 8 9-12h-6z"/></svg></span><span class="wm">Volta<small>BATERÍAS</small></span></a><div class="hdr-right"><div class="clock" id="clock3">--:--</div></div></header>
+  <div class="body"><div class="cam-wrap">
+    <div class="viewfinder" id="vf">
+      <video id="video" autoplay playsinline muted></video>
+      <div class="frame"></div>
+      <div class="msg" id="cammsg">Activando la cámara…</div>
+    </div>
+    <div class="side">
+      <div class="name" id="cam-name"></div>
+      <div class="sub">Mira a la cámara y pulsa</div>
+      <div class="suggest" id="suggest"></div>
+      <button class="big in"  id="btn-in"  disabled>▶ Entrada</button>
+      <button class="big out" id="btn-out" disabled>◼ Salida</button>
+      <button class="ghost" id="btn-cancel">No soy yo / Cancelar</button>
+    </div>
+  </div></div>
+</section>
+
+<!-- ============ PANTALLA 3: CONFIRMACIÓN ============ -->
+<section class="screen" id="s-done">
+  <header><a class="logo" aria-label="Volta Baterías"><span class="ico"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 2 4 14h6l-1 8 9-12h-6z"/></svg></span><span class="wm">Volta<small>BATERÍAS</small></span></a><div class="hdr-right"><div class="clock" id="clock4">--:--</div></div></header>
+  <div class="body"><div class="done" id="donebox">
+    <img id="done-img" alt="">
+    <div class="tag" id="done-tag"></div>
+    <div class="name" id="done-name"></div>
+    <div class="when" id="done-when"></div>
+    <div class="note" id="done-note"></div>
+  </div></div>
+</section>
+
+<div class="toast" id="toast"></div>
+<canvas id="canvas" hidden></canvas>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const screens = ["s-home","s-pin","s-cam","s-done"];
+  let current = null, stream = null, pinBuf = "", idleTimer = null, doneTimer = null;
+
+  // ---------- reloj ----------
+  const fmtTime = d => d.toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"});
+  function tick(){
+    const d = new Date();
+    ["clock","clock2","clock3","clock4"].forEach(id => $(id).textContent = fmtTime(d));
+    $("date").textContent = d.toLocaleDateString("es-ES",{weekday:"long",day:"numeric",month:"long"});
+  }
+  tick(); setInterval(tick, 10000);
+
+  // ---------- navegación ----------
+  function show(id){
+    screens.forEach(s => $(s).classList.toggle("active", s===id));
+    if (id !== "s-cam") stopCamera();
+    resetIdle();
+  }
+  function resetIdle(){
+    clearTimeout(idleTimer);
+    const active = document.querySelector(".screen.active")?.id;
+    if (active && active !== "s-home") idleTimer = setTimeout(goHome, CONFIG.INACTIVIDAD*1000);
+  }
+  function goHome(){ clearTimeout(doneTimer); current = null; pinBuf=""; show("s-home"); }
+  ["pointerdown","keydown"].forEach(ev => document.addEventListener(ev, resetIdle, {passive:true}));
+
+  // ---------- memoria local (último fichaje por persona) ----------
+  const store = {
+    get(k, def){ try{ const v = localStorage.getItem(k); return v===null?def:JSON.parse(v);}catch(e){ return def; } },
+    set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+  };
+  const lastOf = id => store.get("last:"+id, null);
+
+  // ---------- rejilla de nombres ----------
+  function renderGrid(){
+    const g = $("grid"); g.innerHTML = "";
+    CONFIG.EMPLEADOS.forEach(e => {
+      const b = document.createElement("button");
+      b.className = "who"; b.type="button";
+      const last = lastOf(e.id);
+      let s = "";
+      if (last && new Date(last.t).toDateString() === new Date().toDateString())
+        s = (last.tipo==="Entrada" ? "Dentro desde " : "Salió a las ") + fmtTime(new Date(last.t));
+      b.innerHTML = `<span>${e.nombre}</span><small>${s}</small>`;
+      b.addEventListener("click", () => pick(e));
+      g.appendChild(b);
+    });
+  }
+  function pick(e){
+    current = e;
+    if (e.pin && e.pin.length) { pinBuf=""; paintPin(); $("pin-name").textContent = e.nombre; show("s-pin"); }
+    else openCamera();
+  }
+
+  // ---------- PIN ----------
+  const keys = $("keys");
+  ["1","2","3","4","5","6","7","8","9","⌫","0","OK"].forEach(k => {
+    const b = document.createElement("button"); b.textContent = k; b.type="button";
+    b.addEventListener("click", () => {
+      if (k==="⌫") pinBuf = pinBuf.slice(0,-1);
+      else if (k==="OK") checkPin();
+      else if (pinBuf.length<4) pinBuf += k;
+      paintPin();
+      if (pinBuf.length===4 && k!=="OK") setTimeout(checkPin, 120);
+    });
+    keys.appendChild(b);
+  });
+  function paintPin(){ [...$("pindots").children].forEach((d,i)=>d.classList.toggle("on", i<pinBuf.length)); }
+  function checkPin(){
+    if (pinBuf === current.pin) { $("pindots").classList.remove("err"); openCamera(); }
+    else { $("pindots").classList.add("err"); pinBuf=""; paintPin(); toast("PIN incorrecto"); setTimeout(()=>$("pindots").classList.remove("err"), 700); }
+  }
+  $("pin-cancel").addEventListener("click", goHome);
+
+  // ---------- cámara ----------
+  async function openCamera(){
+    $("cam-name").textContent = current.nombre;
+    const last = lastOf(current.id);
+    $("suggest").innerHTML = last ? `Último fichaje: <b>${last.tipo}</b> ${new Date(last.t).toLocaleString("es-ES",{weekday:"short",hour:"2-digit",minute:"2-digit"})}` : "";
+    const sugIn = !last || last.tipo==="Salida";
+    $("btn-in").style.order = sugIn ? 0 : 1; $("btn-out").style.order = sugIn ? 1 : 0;
+    $("vf").classList.remove("nocam"); $("cammsg").textContent = "Activando la cámara…";
+    $("btn-in").disabled = $("btn-out").disabled = true;
+    show("s-cam");
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:"user", width:{ideal:640}, height:{ideal:480} }, audio:false });
+      $("video").srcObject = stream;
+      await new Promise(r => { $("video").onloadedmetadata = r; setTimeout(r, 2500); });
+      $("btn-in").disabled = $("btn-out").disabled = false;
+    } catch (err) {
+      // La foto es obligatoria: sin cámara no se puede fichar
+      $("vf").classList.add("nocam");
+      $("cammsg").textContent = "Sin cámara no se puede fichar. Avisa a un responsable para revisar la tablet.";
+      $("btn-in").disabled = $("btn-out").disabled = true;
+      stream = null;
+    }
+  }
+  function stopCamera(){
+    if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+    $("video").srcObject = null;
+  }
+  function snapshot(){
+    if (!stream) return null;
+    const v = $("video"), c = $("canvas");
+    const w = 480, h = Math.round(w * (v.videoHeight||3) / (v.videoWidth||4));
+    c.width = w; c.height = h;
+    const ctx = c.getContext("2d");
+    ctx.drawImage(v, 0, 0, w, h);
+    // Marca de agua con fecha/hora
+    ctx.font = "bold 18px Arial"; ctx.fillStyle="rgba(229,57,53,.85)"; ctx.fillRect(0,h-28,w,28);
+    ctx.fillStyle="#fff"; ctx.fillText(new Date().toLocaleString("es-ES"), 10, h-9);
+    return c.toDataURL("image/jpeg", 0.72);
+  }
+  $("btn-in").addEventListener("click", () => fichar("Entrada"));
+  $("btn-out").addEventListener("click", () => fichar("Salida"));
+  $("btn-cancel").addEventListener("click", goHome);
+
+  // ---------- fichar ----------
+  function uuid(){ return crypto.randomUUID ? crypto.randomUUID() : Date.now()+"-"+Math.random().toString(16).slice(2); }
+  async function fichar(tipo){
+    if (!current) return;
+    $("btn-in").disabled = $("btn-out").disabled = true;
+    const dataUrl = snapshot();
+    if (!dataUrl) { toast("No se ha podido hacer la foto. Inténtalo de nuevo."); $("btn-in").disabled = $("btn-out").disabled = false; return; }
+    const now = new Date();
+    const rec = {
+      uid: uuid(),
+      empleado_id: current.id,
+      empleado_nombre: current.nombre,
+      tipo,
+      hora_tablet: now.toISOString(),
+      dispositivo: CONFIG.DISPOSITIVO,
+      foto: dataUrl.split(",")[1]
+    };
+    store.set("last:"+current.id, { tipo, t: now.toISOString() });
+    showDone(tipo, current.nombre, now, dataUrl, "Guardando…");
+    const ok = await send(rec);
+    $("done-note").textContent = ok ? "Fichaje guardado" : "Sin conexión: se guardará automáticamente en cuanto vuelva la red";
+    if (!ok) enqueue(rec);
+    renderGrid(); updateNet();
+  }
+  function showDone(tipo, nombre, when, img, note){
+    const box = $("donebox"); box.classList.remove("err");
+    $("done-img").src = img || ""; $("done-img").hidden = !img;
+    const t = $("done-tag"); t.textContent = tipo; t.className = "tag " + (tipo==="Entrada"?"in":"out");
+    $("done-name").textContent = nombre;
+    $("done-when").textContent = fmtTime(when);
+    $("done-note").textContent = note;
+    show("s-done");
+    clearTimeout(doneTimer);
+    doneTimer = setTimeout(goHome, CONFIG.CONFIRMACION*1000);
+  }
+
+  // ---------- envío y cola offline ----------
+  async function send(rec){
+    try {
+      const body = new URLSearchParams(rec); // form-urlencoded: sin preflight CORS
+      const ctrl = new AbortController(); const to = setTimeout(()=>ctrl.abort(), 20000);
+      const r = await fetch(CONFIG.WEBHOOK_URL, { method:"POST", body, signal: ctrl.signal });
+      clearTimeout(to);
+      return r.ok;
+    } catch (e) { return false; }
+  }
+  function enqueue(rec){ const q = store.get("queue", []); q.push(rec); store.set("queue", q); }
+  async function flush(){
+    let q = store.get("queue", []);
+    if (!q.length || !navigator.onLine) return;
+    const rest = [];
+    for (const rec of q) { if (!(await send(rec))) rest.push(rec); }
+    store.set("queue", rest); updateNet();
+    if (q.length && !rest.length) toast("Fichajes pendientes enviados");
+  }
+  function updateNet(){
+    const q = store.get("queue", []).length;
+    const dot = $("netdot"), txt = $("nettxt");
+    if (!navigator.onLine) { dot.className="dot off"; txt.textContent = "Sin conexión" + (q?` · ${q} pendiente${q>1?"s":""}`:""); }
+    else if (q) { dot.className="dot queue"; txt.textContent = `${q} fichaje${q>1?"s":""} pendiente${q>1?"s":""} de enviar`; }
+    else { dot.className="dot"; txt.textContent = "Conectado"; }
+    $("lastinfo").textContent = CONFIG.DISPOSITIVO;
+  }
+  window.addEventListener("online", () => { updateNet(); flush(); });
+  window.addEventListener("offline", updateNet);
+  setInterval(flush, 30000);
+
+  let toastTimer;
+  function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove("show"), 2500); }
+
+  // Mantener la pantalla encendida mientras la página está visible (si el navegador lo permite)
+  async function wake(){ try{ if (navigator.wakeLock) await navigator.wakeLock.request("screen"); }catch(e){} }
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) wake(); }); wake();
+
+  renderGrid(); updateNet(); flush();
+})();
+</script>
+</body>
+</html>
