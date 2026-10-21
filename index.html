@@ -173,7 +173,6 @@ const CONFIG = {
     <div class="side">
       <div class="name" id="cam-name"></div>
       <div class="sub">Mira a la cámara y pulsa</div>
-      <div class="suggest" id="suggest"></div>
       <button class="big in"  id="btn-in"  disabled>▶ Entrada</button>
       <button class="big out" id="btn-out" disabled>◼ Salida</button>
       <button class="ghost" id="btn-cancel">No soy yo / Cancelar</button>
@@ -230,7 +229,6 @@ const CONFIG = {
     get(k, def){ try{ const v = localStorage.getItem(k); return v===null?def:JSON.parse(v);}catch(e){ return def; } },
     set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
   };
-  const lastOf = id => store.get("last:"+id, null);
 
   // ---------- rejilla de nombres ----------
   function renderGrid(){
@@ -238,11 +236,7 @@ const CONFIG = {
     CONFIG.EMPLEADOS.forEach(e => {
       const b = document.createElement("button");
       b.className = "who"; b.type="button";
-      const last = lastOf(e.id);
-      let s = "";
-      if (last && new Date(last.t).toDateString() === new Date().toDateString())
-        s = (last.tipo==="Entrada" ? "Dentro desde " : "Salió a las ") + fmtTime(new Date(last.t));
-      b.innerHTML = `<span>${e.nombre}</span><small>${s}</small>`;
+      b.innerHTML = `<span>${e.nombre}</span>`;
       b.addEventListener("click", () => pick(e));
       g.appendChild(b);
     });
@@ -276,10 +270,6 @@ const CONFIG = {
   // ---------- cámara ----------
   async function openCamera(){
     $("cam-name").textContent = current.nombre;
-    const last = lastOf(current.id);
-    $("suggest").innerHTML = last ? `Último fichaje: <b>${last.tipo}</b> ${new Date(last.t).toLocaleString("es-ES",{weekday:"short",hour:"2-digit",minute:"2-digit"})}` : "";
-    const sugIn = !last || last.tipo==="Salida";
-    $("btn-in").style.order = sugIn ? 0 : 1; $("btn-out").style.order = sugIn ? 1 : 0;
     $("vf").classList.remove("nocam"); $("cammsg").textContent = "Activando la cámara…";
     $("btn-in").disabled = $("btn-out").disabled = true;
     show("s-cam");
@@ -333,7 +323,6 @@ const CONFIG = {
       dispositivo: CONFIG.DISPOSITIVO,
       foto: dataUrl.split(",")[1]
     };
-    store.set("last:"+current.id, { tipo, t: now.toISOString() });
     showDone(tipo, current.nombre, now, dataUrl, "Guardando…");
     const ok = await send(rec);
     $("done-note").textContent = ok ? "Fichaje guardado" : "Sin conexión: se guardará automáticamente en cuanto vuelva la red";
@@ -390,6 +379,7 @@ const CONFIG = {
   async function wake(){ try{ if (navigator.wakeLock) await navigator.wakeLock.request("screen"); }catch(e){} }
   document.addEventListener("visibilitychange", () => { if (!document.hidden) wake(); }); wake();
 
+  try{ Object.keys(localStorage).filter(k=>k.startsWith("last:")).forEach(k=>localStorage.removeItem(k)); }catch(e){}
   renderGrid(); updateNet(); flush();
 })();
 </script>
