@@ -40,13 +40,14 @@ header{background:var(--brand);color:#fff;display:flex;align-items:center;justif
 .clock{font:700 40px/1 var(--display);font-variant-numeric:tabular-nums}
 .date{font-size:14px;opacity:.9;text-transform:capitalize;margin-top:2px}
 .body{flex:1;display:flex;flex-direction:column;min-height:0;padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px));padding-block:0 env(safe-area-inset-bottom,0px)}
-.hint{color:var(--muted);font-size:17px;padding-block:16px 6px;font-weight:500}
-.grid{flex:1;display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));grid-auto-rows:minmax(96px,1fr);gap:14px;padding-block:8px 16px;overflow:auto}
-.who{appearance:none;border:1px solid var(--line);border-radius:18px;background:var(--panel);color:var(--fg);font:700 30px/1.1 var(--display);text-transform:uppercase;letter-spacing:.01em;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:10px;min-width:0;box-shadow:0 1px 2px rgba(18,18,18,.05),0 8px 24px -8px rgba(18,18,18,.08)}
+.hint{color:var(--muted);font-size:clamp(14px,2vh,17px);padding-block:clamp(6px,1.5vh,14px) 4px;font-weight:500}
+/* La rejilla se calcula en JS (columnas × filas) para que todos los nombres quepan sin desplazamiento */
+.grid{flex:1;display:grid;grid-auto-rows:1fr;gap:clamp(8px,1.4vw,14px);padding-block:4px 10px;overflow:hidden;min-height:0}
+.who{appearance:none;border:1px solid var(--line);border-radius:18px;background:var(--panel);color:var(--fg);font:700 clamp(18px,min(5.5vh,3.4vw),34px)/1.1 var(--display);text-transform:uppercase;letter-spacing:.01em;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:6px;min-width:0;min-height:0;overflow:hidden;box-shadow:0 1px 2px rgba(18,18,18,.05),0 8px 24px -8px rgba(18,18,18,.08)}
 .who small{font:500 13.5px var(--body);color:var(--muted);text-transform:none;letter-spacing:0}
 .who:active{background:var(--brand);color:#fff;border-color:var(--brand);box-shadow:0 0 0 1px rgba(229,57,53,.22),0 8px 40px -8px rgba(229,57,53,.35)}
 .who:active small{color:#fff}
-footer{display:flex;justify-content:space-between;align-items:center;gap:12px;padding-block:8px 14px;color:var(--muted);font-size:13.5px}
+footer{display:flex;justify-content:space-between;align-items:center;gap:12px;padding-block:4px 8px;color:var(--muted);font-size:13px}
 .pill{display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:6px 14px;background:var(--panel);border:1px solid var(--line);font-weight:500}
 .dot{width:10px;height:10px;border-radius:50%;background:var(--in)}
 .dot.off{background:var(--out)}
@@ -95,7 +96,6 @@ footer{display:flex;justify-content:space-between;align-items:center;gap:12px;pa
   .cam-wrap{grid-template-columns:1fr;grid-template-rows:minmax(200px,1fr) auto}
   .name{font-size:36px}.big{font-size:28px;min-height:76px;padding:16px}
   .clock{font-size:30px}.logo .wm{font-size:20px}
-  .grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}
   .who{font-size:24px}
 }
 @media (prefers-reduced-motion:no-preference){
@@ -231,8 +231,21 @@ const CONFIG = {
   };
 
   // ---------- rejilla de nombres ----------
+  function fitGrid(){
+    const g = $("grid"), n = CONFIG.EMPLEADOS.length;
+    const w = g.clientWidth || window.innerWidth, hgt = g.clientHeight || window.innerHeight*0.6;
+    // Elegir el nº de columnas que deja las celdas más cuadradas posibles (relación ~1.6:1)
+    let best = 1, bestScore = Infinity;
+    for (let c = 1; c <= n; c++) {
+      const r = Math.ceil(n / c), cw = w / c, ch = hgt / r;
+      const score = Math.abs(Math.log((cw / ch) / 1.6)) + (c * r - n) * 0.05;
+      if (score < bestScore) { bestScore = score; best = c; }
+    }
+    g.style.gridTemplateColumns = `repeat(${best},1fr)`;
+  }
+  window.addEventListener("resize", fitGrid);
   function renderGrid(){
-    const g = $("grid"); g.innerHTML = "";
+    const g = $("grid"); g.innerHTML = ""; fitGrid();
     CONFIG.EMPLEADOS.forEach(e => {
       const b = document.createElement("button");
       b.className = "who"; b.type="button";
