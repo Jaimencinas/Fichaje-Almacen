@@ -20,11 +20,15 @@ Todo está al principio de `index.html`, en el bloque `CONFIG`:
 - `DISPOSITIVO`: nombre de la tablet.
 - `EMPLEADOS`: lista de personas. `id` es el ID del registro en la tabla *Empleados* de Airtable; `pin` es opcional (4 dígitos).
 - `INACTIVIDAD` / `CONFIRMACION`: segundos para volver al inicio y duración de la pantalla de confirmación.
+- `SALVAPANTALLAS`: segundos sin tocar el inicio antes de ponerse en negro (0 = desactivado). Un toque lo quita y ese toque no ficha.
 
 ## Despliegue
 
 Netlify: conectar este repositorio, sin comando de build, directorio de publicación `.` (ya indicado en `netlify.toml`). Cada `git push` a `main` redespliega.
 
 ## Tablet
+
+La Hotwav R10 no se despierta tocando la pantalla apagada (no tiene doble toque para despertar), así que la web no deja que la pantalla se apague: mantiene un *Wake Lock* y, tras `SALVAPANTALLAS` segundos, se pone en negro. Un toque devuelve la lista de nombres. En la tablet: bloqueo de pantalla en *Ninguno*, ahorro de batería desactivado y tiempo de espera de pantalla al máximo.
+
 
 Abrir la URL de Netlify en Chrome y permitir la cámara. Para dejarla en modo kiosco, instalar Fully Kiosk Browser, poner la URL como página de inicio, dar permiso permanente de cámara y activar el modo kiosco con contraseña.

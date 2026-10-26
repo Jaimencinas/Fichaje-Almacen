@@ -92,6 +92,12 @@ footer{display:flex;justify-content:space-between;align-items:center;gap:12px;pa
 .done .note{color:var(--muted);font-size:16px;max-width:48ch}
 .toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:#121212;color:#fff;padding:12px 20px;border-radius:999px;font-size:15px;display:none;max-width:90vw;text-align:center}
 .toast.show{display:block}
+/* salvapantallas negro: la pantalla sigue encendida, un toque la quita */
+.saver{position:fixed;inset:0;z-index:50;background:#000;display:none;cursor:pointer;touch-action:none}
+.saver.show{display:block}
+.saver .sv{position:absolute;color:#3a3a3a;text-align:center;transition:top 1s,left 1s;transform:translate(-50%,-50%);pointer-events:none}
+.saver .sv b{display:block;font:700 64px/1 var(--display);font-variant-numeric:tabular-nums}
+.saver .sv span{font:500 16px var(--body)}
 @media (max-width:760px){
   .cam-wrap{grid-template-columns:1fr;grid-template-rows:minmax(200px,1fr) auto}
   .name{font-size:36px}.big{font-size:28px;min-height:76px;padding:16px}
@@ -115,6 +121,8 @@ const CONFIG = {
   DISPOSITIVO: "Tablet almacén",
   // Segundos sin tocar la pantalla antes de volver al inicio
   INACTIVIDAD: 40,
+  // Segundos sin tocar la pantalla de inicio antes de ponerla en negro (0 = nunca)
+  SALVAPANTALLAS: 60,
   // Segundos que se muestra la pantalla de confirmación
   CONFIRMACION: 4,
   // Plantilla: id = ID del registro en la tabla Empleados de Airtable.
@@ -193,6 +201,7 @@ const CONFIG = {
 </section>
 
 <div class="toast" id="toast"></div>
+<div class="saver" id="saver"><div class="sv" id="sv"><b id="svclock">--:--</b><span>Toca la pantalla para fichar</span></div></div>
 <canvas id="canvas" hidden></canvas>
 
 <script>
@@ -388,9 +397,34 @@ const CONFIG = {
   let toastTimer;
   function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove("show"), 2500); }
 
-  // Mantener la pantalla encendida mientras la página está visible (si el navegador lo permite)
-  async function wake(){ try{ if (navigator.wakeLock) await navigator.wakeLock.request("screen"); }catch(e){} }
-  document.addEventListener("visibilitychange", () => { if (!document.hidden) wake(); }); wake();
+  // ---------- pantalla siempre encendida ----------
+  // La tablet no puede despertarse tocando la pantalla apagada, así que nunca dejamos que se apague:
+  // pedimos el bloqueo de pantalla (Wake Lock) y lo volvemos a pedir si Android lo suelta.
+  let lock = null;
+  async function wake(){
+    if (!("wakeLock" in navigator) || document.hidden || (lock && !lock.released)) return;
+    try{ lock = await navigator.wakeLock.request("screen"); lock.addEventListener("release", () => { lock = null; setTimeout(wake, 1000); }); }
+    catch(e){ lock = null; }
+  }
+  document.addEventListener("visibilitychange", wake);
+  document.addEventListener("pointerdown", wake, {passive:true});
+  setInterval(wake, 30000); wake();
+
+  // ---------- salvapantallas negro (un toque lo quita) ----------
+  const saver = $("saver"); let saverTimer = null;
+  function saverOn(){
+    if (document.querySelector(".screen.active")?.id !== "s-home") return armSaver();
+    $("svclock").textContent = fmtTime(new Date()); moveSaver();
+    saver.classList.add("show");
+  }
+  function moveSaver(){ const sv=$("sv"); sv.style.left = (20+Math.random()*60)+"%"; sv.style.top = (20+Math.random()*60)+"%"; }
+  function armSaver(){ clearTimeout(saverTimer); if (CONFIG.SALVAPANTALLAS>0) saverTimer = setTimeout(saverOn, CONFIG.SALVAPANTALLAS*1000); }
+  // El toque que quita el salvapantallas no llega a los botones de debajo (no se ficha por error)
+  saver.addEventListener("pointerdown", e => { e.preventDefault(); e.stopPropagation(); }, true);
+  saver.addEventListener("click", e => { e.preventDefault(); e.stopPropagation(); saver.classList.remove("show"); armSaver(); wake(); }, true);
+  ["pointerdown","keydown"].forEach(ev => document.addEventListener(ev, () => { if (!saver.classList.contains("show")) armSaver(); }, {passive:true}));
+  setInterval(() => { if (saver.classList.contains("show")) { $("svclock").textContent = fmtTime(new Date()); moveSaver(); } }, 60000);
+  armSaver();
 
   try{ Object.keys(localStorage).filter(k=>k.startsWith("last:")).forEach(k=>localStorage.removeItem(k)); }catch(e){}
   renderGrid(); updateNet(); flush();
