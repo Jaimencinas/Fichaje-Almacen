@@ -20,7 +20,7 @@ Todo está al principio de `index.html`, en el bloque `CONFIG`:
 - `DISPOSITIVO`: nombre de la tablet.
 - `EMPLEADOS`: lista de personas. `id` es el ID del registro en la tabla *Empleados* de Airtable; `pin` es opcional (4 dígitos).
 - `INACTIVIDAD` / `CONFIRMACION`: segundos para volver al inicio y duración de la pantalla de confirmación.
-- `SALVAPANTALLAS`: segundos sin tocar el inicio antes de ponerse en negro (0 = desactivado). Un toque lo quita y ese toque no ficha.
+- `SALVAPANTALLAS`: segundos sin tocar el inicio antes de ponerse en negro (0 = desactivado). `TOQUES_DESPERTAR` (1 o 2) son los toques seguidos para quitarlo; esos toques no fichan.
 
 ## Despliegue
 

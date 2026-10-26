@@ -123,6 +123,8 @@ const CONFIG = {
   INACTIVIDAD: 40,
   // Segundos sin tocar la pantalla de inicio antes de ponerla en negro (0 = nunca)
   SALVAPANTALLAS: 60,
+  // Toques seguidos para quitar la pantalla negra (1 o 2)
+  TOQUES_DESPERTAR: 2,
   // Segundos que se muestra la pantalla de confirmación
   CONFIRMACION: 4,
   // Plantilla: id = ID del registro en la tabla Empleados de Airtable.
@@ -201,7 +203,7 @@ const CONFIG = {
 </section>
 
 <div class="toast" id="toast"></div>
-<div class="saver" id="saver"><div class="sv" id="sv"><b id="svclock">--:--</b><span>Toca la pantalla para fichar</span></div></div>
+<div class="saver" id="saver"><div class="sv" id="sv"><b id="svclock">--:--</b><span id="svhint"></span></div></div>
 <canvas id="canvas" hidden></canvas>
 
 <script>
@@ -412,6 +414,8 @@ const CONFIG = {
 
   // ---------- salvapantallas negro (un toque lo quita) ----------
   const saver = $("saver"); let saverTimer = null;
+  const svText = CONFIG.TOQUES_DESPERTAR > 1 ? "Toca dos veces para fichar" : "Toca la pantalla para fichar";
+  $("svhint").textContent = svText;
   function saverOn(){
     if (document.querySelector(".screen.active")?.id !== "s-home") return armSaver();
     $("svclock").textContent = fmtTime(new Date()); moveSaver();
@@ -421,7 +425,13 @@ const CONFIG = {
   function armSaver(){ clearTimeout(saverTimer); if (CONFIG.SALVAPANTALLAS>0) saverTimer = setTimeout(saverOn, CONFIG.SALVAPANTALLAS*1000); }
   // El toque que quita el salvapantallas no llega a los botones de debajo (no se ficha por error)
   saver.addEventListener("pointerdown", e => { e.preventDefault(); e.stopPropagation(); }, true);
-  saver.addEventListener("click", e => { e.preventDefault(); e.stopPropagation(); saver.classList.remove("show"); armSaver(); wake(); }, true);
+  let lastTap = 0;
+  saver.addEventListener("click", e => {
+    e.preventDefault(); e.stopPropagation(); wake();
+    const now = Date.now();
+    if (CONFIG.TOQUES_DESPERTAR > 1 && now - lastTap > 600) { lastTap = now; $("svhint").textContent = "Toca otra vez"; return; }
+    lastTap = 0; $("svhint").textContent = svText; saver.classList.remove("show"); armSaver();
+  }, true);
   ["pointerdown","keydown"].forEach(ev => document.addEventListener(ev, () => { if (!saver.classList.contains("show")) armSaver(); }, {passive:true}));
   setInterval(() => { if (saver.classList.contains("show")) { $("svclock").textContent = fmtTime(new Date()); moveSaver(); } }, 60000);
   armSaver();
